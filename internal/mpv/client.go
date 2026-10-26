@@ -171,6 +171,23 @@ func (c *Client) LoadFile(path string) error {
 	return err
 }
 
+// LoadFileGapless loads a track and queues the next one without restarting mpv.
+// This is the V3 gapless path: the next track is inserted right after the
+// current position so a song change does not drop audio output.
+func (c *Client) LoadFileGapless(current, next string) error {
+	if current != "" {
+		if _, err := c.Command("loadfile", current, "replace"); err != nil {
+			return err
+		}
+	}
+	if next != "" {
+		if _, err := c.Command("playlist-insert", next); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Seek jumps to an absolute position in seconds.
 func (c *Client) Seek(seconds float64) error {
 	_, err := c.Command("seek", seconds, "absolute+exact")
@@ -183,6 +200,58 @@ func (c *Client) Pause(paused bool) error { return c.SetProperty("pause", paused
 // Quit asks mpv to exit.
 func (c *Client) Quit() error {
 	_, err := c.CommandTimeout(time.Second, "quit")
+	return err
+}
+
+// PlaylistAdd appends files to mpv's playlist.
+func (c *Client) PlaylistAdd(paths []string) error {
+	for _, p := range paths {
+		if _, err := c.Command("playlist-add", p); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// PlaylistClear empties mpv's playlist.
+func (c *Client) PlaylistClear() error {
+	_, err := c.Command("playlist-clear")
+	return err
+}
+
+// PlaylistMove reorders the queue: from -> to (0-based).
+func (c *Client) PlaylistMove(from, to int) error {
+	if from == to {
+		return nil
+	}
+	_, err := c.Command("playlist-move", from, to)
+	return err
+}
+
+// PlaylistDelete removes one entry by index.
+func (c *Client) PlaylistDelete(index int) error {
+	_, err := c.Command("playlist-delete", index)
+	return err
+}
+
+// PlaylistCount reports the number of entries.
+func (c *Client) PlaylistCount() (int, error) {
+	data, err := c.Command("playlist-count")
+	if err != nil {
+		return 0, err
+	}
+	var v struct {
+		Data int `json:"data"`
+	}
+	if err := json.Unmarshal(data, &v); err != nil {
+		return 0, err
+	}
+	return v.Data, nil
+}
+
+// PlaylistNext advances mpv's playlist position.
+func (c *Client) PlaylistNext() error {
+	_, err := c.Command("playlist-next")
 	return err
 }
 

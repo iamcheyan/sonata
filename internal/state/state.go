@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 )
@@ -283,7 +284,91 @@ func (h History) RecentIDs(n int) []string {
 	return out
 }
 
-// ---- io --------------------------------------------------------------------
+// Playlist is one named playlist (playlists/<id>.json).
+type Playlist struct {
+	Version   int           `json:"version"`
+	ID        string        `json:"id"`
+	Name      string        `json:"name"`
+	SongIDs   []string      `json:"songIds"`
+	CreatedAt time.Time     `json:"createdAt"`
+	UpdatedAt time.Time     `json:"updatedAt"`
+}
+
+// LoadPlaylist reads one playlist by id.
+func (s *Store) LoadPlaylist(id string) (Playlist, error) {
+	p := Playlist{Version: Version, ID: id}
+	found, newer, err := s.read(filepath.Join("playlists", id+".json"), &p)
+	if err != nil {
+		return p, err
+	}
+	if newer {
+		return p, ErrNewerFormat
+	}
+	if !found {
+		return p, ErrPlaylistNotFound
+	}
+	if p.SongIDs == nil {
+		p.SongIDs = []string{}
+	}
+	return p, nil
+}
+
+// SavePlaylist writes playlists/<id>.json.
+func (s *Store) SavePlaylist(p Playlist) error {
+	p.Version = Version
+	p.UpdatedAt = time.Now().UTC()
+	if p.ID == "" {
+		return errors.New("playlist id is empty")
+	}
+	if p.Name == "" {
+		p.Name = p.ID
+	}
+	if p.SongIDs == nil {
+		p.SongIDs = []string{}
+	}
+	return s.write(filepath.Join("playlists", p.ID+".json"), p)
+}
+
+// DeletePlaylist removes one playlist.
+func (s *Store) DeletePlaylist(id string) error {
+	path := filepath.Join(s.dir, "playlists", id+".json")
+	if err := os.Remove(path); err != nil {
+		if os.IsNotExist(err) {
+			return ErrPlaylistNotFound
+		}
+		return err
+	}
+	return nil
+}
+
+// ListPlaylists returns every playlist, newest first.
+func (s *Store) ListPlaylists() ([]Playlist, error) {
+	dir := filepath.Join(s.dir, "playlists")
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	var out []Playlist
+	for _, e := range entries {
+		if e.IsDir() || filepath.Ext(e.Name()) != ".json" {
+			continue
+		}
+		id := strings.TrimSuffix(e.Name(), ".json")
+		p, err := s.LoadPlaylist(id)
+		if err != nil {
+			continue
+		}
+		out = append(out, p)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].UpdatedAt.After(out[j].UpdatedAt) })
+	return out, nil
+}
+
+// ErrPlaylistNotFound is returned when a playlist does not exist.
+var ErrPlaylistNotFound = errors.New("playlist not found")
 
 // read decodes path into v. found reports whether the file existed; newer
 // reports whether the file's version is greater than Version.

@@ -241,3 +241,44 @@ func (p *Player) rebuildShuffle() {
 	p.shuffle = perm
 	p.shufPos = 0
 }
+
+// Append adds songs to the end of the queue without moving the cursor.
+func (p *Player) Append(songs []library.Song) {
+	p.queue = append(p.queue, songs...)
+	p.rebuildShuffle()
+}
+
+// Move reorders the queue: from -> to.
+func (p *Player) Move(from, to int) {
+	if from < 0 || from >= len(p.queue) || to < 0 || to >= len(p.queue) || from == to {
+		return
+	}
+	song := p.queue[from]
+	p.queue = append(p.queue[:from], p.queue[from+1:]...)
+	p.queue = append(p.queue[:to], append([]library.Song{song}, p.queue[to:]...)...)
+	p.index = to
+	p.rebuildShuffle()
+}
+
+// Remove drops one entry from the queue.
+func (p *Player) Remove(index int) {
+	if index < 0 || index >= len(p.queue) {
+		return
+	}
+	p.queue = append(p.queue[:index], p.queue[index+1:]...)
+	if p.index >= len(p.queue) {
+		p.index = len(p.queue) - 1
+	}
+	if p.index < 0 {
+		p.index = 0
+	}
+	p.rebuildShuffle()
+}
+
+// Clear empties the queue.
+func (p *Player) Clear() {
+	p.queue = nil
+	p.index = 0
+	p.played = map[string]bool{}
+	p.rebuildShuffle()
+}

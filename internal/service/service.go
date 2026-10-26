@@ -228,6 +228,56 @@ func (s *Service) Playback() state.Playback {
 // Queue returns the current queue.
 func (s *Service) Queue() []library.Song { return s.pl.Queue() }
 
+// AddToQueue appends songs to the end of the queue.
+func (s *Service) AddToQueue(songs []library.Song) error {
+	s.pl.Append(songs)
+	s.mu.Lock()
+	cl := s.cl
+	s.mu.Unlock()
+	if cl != nil {
+		for _, song := range songs {
+			_, _ = cl.Command("playlist-add", song.Path)
+		}
+	}
+	return nil
+}
+
+// MoveQueue reorders the queue: from -> to.
+func (s *Service) MoveQueue(from, to int) error {
+	s.pl.Move(from, to)
+	s.mu.Lock()
+	cl := s.cl
+	s.mu.Unlock()
+	if cl != nil {
+		return cl.PlaylistMove(from, to)
+	}
+	return nil
+}
+
+// RemoveFromQueue removes one entry.
+func (s *Service) RemoveFromQueue(index int) error {
+	s.pl.Remove(index)
+	s.mu.Lock()
+	cl := s.cl
+	s.mu.Unlock()
+	if cl != nil {
+		return cl.PlaylistDelete(index)
+	}
+	return nil
+}
+
+// ClearQueue empties the queue.
+func (s *Service) ClearQueue() error {
+	s.pl.Clear()
+	s.mu.Lock()
+	cl := s.cl
+	s.mu.Unlock()
+	if cl != nil {
+		return cl.PlaylistClear()
+	}
+	return nil
+}
+
 // Stop stops playback and quits mpv.
 func (s *Service) Stop() error {
 	if err := s.stopPlayback(); err != nil {
