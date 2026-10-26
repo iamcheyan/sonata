@@ -6,7 +6,7 @@ All Songs                       │ walpurgis
   我的地盘             0:04     │
                                 │ Length: 0:06
                                 │ Format: FLAC
-                                │ /tmp/sonata-fix/Aimer/walpurgis/01 walpurgis.flac
+                                │ [music library]
                                 │
                                 │
                                 │

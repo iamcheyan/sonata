@@ -21,22 +21,19 @@
 | [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md) | 目录布局、JSON 格式、原子写、版本迁移、存储方案对比 |
 | [RISKS.md](RISKS.md) | 风险清单与缓解、非目标 |
 
-## 界面（90×30 终端抓屏，对应 720×480 横屏布局）
+## Screenshots
 
-```
-♪ Sonata   Music   mpv: stopped                                                      14:09
-Music                           │ Library
-> All Songs (4)                 │
-  Artists (3)                   │ 4 songs · 3 artists · 3 albums
-  Albums (3)                    │ Scanned 2026-10-26 14:09
-  Favorites (0)                 │
-  Recently Played               │ /tmp/sonata-fix
-  Now Playing                   │
-  Queue                         │
-[A] Open  [B] Back  [D-PAD] Move  [START] Play/Pause  [L] Lock  [O] Screen off
-```
+Terminal UI captures from a 90×30 session, corresponding to Sonata's 720×480
+landscape layout. PNGs are rendered from the captured terminal rows; `.txt` files
+preserve the original text captures. The playback screen uses a local audio fixture.
 
-完整抓屏见 `docs/screenshots/`（主菜单 / 歌曲列表 / 正在播放 / 锁屏）。
+| Main menu | Song list |
+|---|---|
+| ![Main menu](docs/screenshots/01-main.png) | ![Song list](docs/screenshots/02-songs.png) |
+
+| Now playing | Lock screen |
+|---|---|
+| ![Now playing](docs/screenshots/03-nowplaying.png) | ![Lock screen](docs/screenshots/04-locked.png) |
 
 ## 构建
 

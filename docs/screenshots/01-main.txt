@@ -4,7 +4,7 @@ Music                           │ Library
   Artists (3)                   │ 4 songs · 3 artists · 3 albums
   Albums (3)                    │ Scanned 2026-10-26 14:09
   Favorites (0)                 │
-  Recently Played               │ /tmp/sonata-fix
+  Recently Played               │ [music library]
   Now Playing                   │
   Queue                         │
                                 │
