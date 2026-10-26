@@ -57,3 +57,13 @@ sonata stop                      # 停止并退出 mpv
 ```
 
 依赖：`mpv`（播放）。TUI 需要终端至少 90×30（更小进入紧凑模式）。
+
+## heya integration
+
+Sonata follows heya's Application Manifest v1 and is discovered as a normal
+`media` application. See [`integrations/heya/`](integrations/heya/) and
+[`docs/heya-compatibility.md`](docs/heya-compatibility.md) for the manifest,
+storage mapping, and device acceptance checklist. Heya needs no Sonata-specific
+launcher code; the manifest's `entrypoint` and `args` are enough.
+
+ROCKNIX packaging draft: [`packaging/rocknix/package.mk`](packaging/rocknix/package.mk).

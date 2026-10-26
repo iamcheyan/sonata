@@ -87,3 +87,12 @@
 - 触摸/鼠标交互：未实现（键盘/手柄优先）。
 - SDL/图形界面：V1 不做；布局常量已按 720×480 固化，便于移植。
 - 掌机实机（RG34XX）验证：需要 mpv 与 tcell 在 ROCKNIX 上的运行验证，尚未进行。
+
+## 5. heya Manifest v1 集成（按 cpr64 落地）
+
+- `integrations/heya/apps/sonata/app.json` 使用 `manifestVersion: 1`、稳定 `id`、`entrypoint`、argv 数组、`workingDirectory`、`category: media`、能力声明。
+- `permissions: [audio, storage]` 是展示声明，不是沙箱权限；`features: [resume-support]` 是可忽略的能力标记。
+- heya 以直接 argv 调用 `/usr/bin/sonata`，无 shell 拼接；heya 核心无需 Sonata/game 特殊代码。
+- 用户数据、索引缓存、日志分别落在 `/storage/heya/data/sonata`、`/storage/heya/cache/sonata`、`/storage/heya/logs/sonata`，符合 heya 的标准布局。
+- 实测验证 manifest 的 ID/字段和直接 argv 启动（将设备路径替换为本机 fixture）；扫描结果 4 songs / 3 artists / 3 albums。
+- 另有 `docs/heya-compatibility.md` 说明字段映射和设备端验收项。

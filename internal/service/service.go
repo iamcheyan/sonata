@@ -418,7 +418,10 @@ func (s *Service) pollLoop(cl *mpv.Client) {
 func SocketFor(dataDir string) string { return mpv.SocketPath(dataDir) }
 
 // LogPath returns the mpv log location for a data directory.
-func LogPath(dataDir string) string { return filepath.Join(dataDir, "logs", "mpv.log") }
+func LogPath(dataDir string) string {
+	base := filepath.Dir(filepath.Dir(filepath.Clean(dataDir)))
+	return filepath.Join(base, "logs", "sonata", "mpv.log")
+}
 
 // FormatPosition renders a position for CLI output.
 func FormatPosition(sec float64) string {

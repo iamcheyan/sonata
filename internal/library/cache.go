@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -24,9 +25,6 @@ func LoadCache(path string) (*Library, error) {
 		return nil, fmt.Errorf("parse %s: %w", path, err)
 	}
 	if lib.Version != CacheVersion {
-		return nil, ErrStaleCache
-	}
-	if len(lib.Songs) == 0 {
 		return nil, ErrStaleCache
 	}
 	lib.index()
@@ -50,7 +48,7 @@ func SaveCache(path string, lib *Library) error {
 
 // Fresh reports whether a cached index still matches the directory state.
 func Fresh(lib *Library, root string) bool {
-	if lib == nil || lib.Root != root {
+	if lib == nil || filepath.Clean(lib.Root) != filepath.Clean(root) {
 		return false
 	}
 	fp, err := fingerprint(root)
@@ -72,7 +70,7 @@ func fingerprint(root string) (Fingerprint, error) {
 			}
 			return nil
 		}
-		if !audioExts[filepath.Ext(path)] {
+		if !audioExts[strings.ToLower(filepath.Ext(path))] {
 			return nil
 		}
 		info, err := d.Info()
