@@ -1,0 +1,30 @@
+♪ Sonata   Music   mpv: stopped                                                      14:09
+Music                           │ Library
+> All Songs (4)                 │
+  Artists (3)                   │ 4 songs · 3 artists · 3 albums
+  Albums (3)                    │ Scanned 2026-10-26 14:09
+  Favorites (0)                 │
+  Recently Played               │ /tmp/sonata-fix
+  Now Playing                   │
+  Queue                         │
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+[A] Open  [B] Back  [D-PAD] Move  [START] Play/Pause  [L] Lock  [O] Screen off

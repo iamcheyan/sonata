@@ -1,0 +1,30 @@
+♪ Sonata   Now Playing   mpv: playing                                                14:09
+Now Playing                     │ walpurgis
+                                │
+                                │ Aimer · walpurgis
+                                │
+                                │ [█████████●░░░░░░░░░░░░░░░░░░░░░░░░]
+                                │ 0:01 / 0:06
+                                │
+                                │ Mode: 顺序播放
+                                │ Volume: 70%
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+                                │
+[A] Play/Pause  [B] Back  [←/→] Seek 10s  [M] Mode  [+/-] Volume  [SELECT] ★
