@@ -15,25 +15,26 @@
 |---|---|
 | [PROJECT_PLAN.md](PROJECT_PLAN.md) | 目标、非目标、V1–V5 路线图、验收标准 |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 模块分层、并发模型、错误处理、测试策略 |
-| [UI_GUIDELINES.md](UI_GUIDELINES.md) | 四区布局、字号、配色、按键语义、锁屏/熄屏 |
-| [CLI_WIREFRAMES.md](CLI_WIREFRAMES.md) | 9 个界面的 ASCII 线框图（90×30） |
+| [UI_GUIDELINES.md](UI_GUIDELINES.md) | 单栏布局、字号、配色、按键语义、锁屏/熄屏 |
+| [CLI_WIREFRAMES.md](CLI_WIREFRAMES.md) | 界面 ASCII 线框图（90×30） |
 | [MPV_INTEGRATION.md](MPV_INTEGRATION.md) | mpv 方案对比、IPC 协议、后台播放、失败模式 |
 | [STORAGE_LAYOUT.md](STORAGE_LAYOUT.md) | 目录布局、JSON 格式、原子写、版本迁移、存储方案对比 |
 | [RISKS.md](RISKS.md) | 风险清单与缓解、非目标 |
+| [docs/UI_REDESIGN.md](docs/UI_REDESIGN.md) | 单栏手持界面重构说明（cpr67） |
 
 ## Screenshots
 
-Terminal UI captures from a 90×30 session, corresponding to Sonata's 720×480
-landscape layout. PNGs are rendered from the captured terminal rows; `.txt` files
-preserve the original text captures. The playback screen uses a local audio fixture.
+Single-pane handheld UI captured at 90×30. PNGs are rendered from the captured
+terminal rows; `.txt` files keep the source capture. Frames are reproducible
+with `sonata --dump` on a headless machine.
 
-| Main menu | Song list |
-|---|---|
-| ![Main menu](docs/screenshots/01-main.png) | ![Song list](docs/screenshots/02-songs.png) |
+| Main menu | All songs | Now playing |
+|---|---|---|
+| ![Main menu](docs/screenshots/01-main.png) | ![All songs](docs/screenshots/02-songs.png) | ![Now playing](docs/screenshots/03-player.png) |
 
-| Now playing | Lock screen |
-|---|---|
-| ![Now playing](docs/screenshots/03-nowplaying.png) | ![Lock screen](docs/screenshots/04-locked.png) |
+| Artists | Albums | Favorites | Lock |
+|---|---|---|---|
+| ![Artists](docs/screenshots/04-artists.png) | ![Albums](docs/screenshots/05-albums.png) | ![Favorites](docs/screenshots/06-favorites.png) | ![Lock](docs/screenshots/07-lock.png) |
 
 ## 构建
 
@@ -51,6 +52,7 @@ sonata                           # 打开 TUI
 sonata status                    # 打印当前播放状态（JSON）
 sonata play <file|dir>           # 立即播放（不打开 TUI）
 sonata stop                      # 停止并退出 mpv
+sonata --dump <dir>              # 无显示环境渲染 UI 帧（CI/文档用）
 ```
 
 依赖：`mpv`（播放）。TUI 需要终端至少 90×30（更小进入紧凑模式）。

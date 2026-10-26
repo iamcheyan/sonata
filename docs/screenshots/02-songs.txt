@@ -1,30 +1,30 @@
-♪ Sonata   All Songs   mpv: stopped                                                  14:09
-All Songs                       │ walpurgis
-> walpurgis            0:06     │
-  loose-track          0:03     │ Aimer · walpurgis
-  七里香               0:05     │ Track 01
-  我的地盘             0:04     │
-                                │ Length: 0:06
-                                │ Format: FLAC
-                                │ [music library]
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-[A] Play  [B] Back  [D-PAD] Move  [START] Play/Pause  [L1/R1] Prev/Next  [SELECT] ★
+  ♪ Sonata   ▶ walpurgis                                                           21:45
+
+  All Songs
+ ────────────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+  ›  walpurgis            0:06
+
+
+    loose-track          0:03
+
+
+    七里香               0:05
+
+
+    我的地盘             0:04
+
+
+
+
+
+
+
+  ♪ walpurgis — Aimer
+
+ ────────────────────────────────────────────────────────────────────────────────────────
+  A Play     B Back     Select Favorite

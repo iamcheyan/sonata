@@ -1,9 +1,8 @@
 // Package ui renders Sonata's terminal interface.
 //
-// The layout is a fixed four-zone frame (status bar, list, detail, hint bar)
-// sized for a 90x30 grid, which matches the 720x480 landscape panel of the
-// handheld target. Screens are drawn by hand on tcell so that a future SDL
-// renderer can reuse the same geometry.
+// The layout is a single-pane, full-screen handheld interface sized for a
+// 90x30 grid matching the 720x480 landscape target. Screens are drawn by hand
+// on tcell so a future SDL renderer can reuse the same navigation model.
 package ui
 
 import (
@@ -19,10 +18,9 @@ import (
 
 // Layout constants (see UI_GUIDELINES.md).
 const (
-	LeftWidth   = 32
 	ContentRows = 28
-	MinWidth    = 90
-	MinHeight   = 30
+	MinWidth    = 40
+	MinHeight   = 16
 )
 
 // Controller is the playback surface the UI drives. Implemented by the app
@@ -151,7 +149,6 @@ func (a *App) mainPage() *page {
 		{Label: fmt.Sprintf("Favorites (%d)", len(a.fav.Songs)), Action: func(a *App) error { a.push(a.favoritesPage()); return nil }},
 		{Label: "Recently Played", Action: func(a *App) error { a.push(a.recentPage()); return nil }},
 		{Label: "Now Playing", Action: func(a *App) error { a.push(a.nowPlayingPage()); return nil }},
-		{Label: "Queue", Action: func(a *App) error { a.push(a.queuePage()); return nil }},
 	}
 	return p
 }
@@ -168,11 +165,26 @@ func (a *App) songsPage() *page {
 func (a *App) artistsPage() *page {
 	p := &page{kind: PageArtists, title: "Artists"}
 	for i := range a.lib.Artists {
-		ar := a.lib.Artists[i]
-		p.items = append(p.items, Item{
-			Label:  fmt.Sprintf("%s (%d albums)", ar.Name, len(ar.Albums)),
-			Artist: &a.lib.Artists[i],
-		})
+		p.items = append(p.items, Item{Label: a.lib.Artists[i].Name, Artist: &a.lib.Artists[i]})
+	}
+	return p
+}
+
+func (a *App) artistAlbumsPage(artist library.Artist) *page {
+	p := &page{kind: PageAlbums, title: artist.Name}
+	for i := range a.lib.Albums {
+		if a.lib.Albums[i].Artist == artist.Name {
+			p.items = append(p.items, Item{Label: a.lib.Albums[i].Name, Album: &a.lib.Albums[i]})
+		}
+	}
+	return p
+}
+
+func (a *App) albumTracksPage(album library.Album) *page {
+	p := &page{kind: PageSongs, title: album.Name}
+	for _, song := range a.lib.AlbumSongs(album.Name, album.Artist) {
+		s := song
+		p.items = append(p.items, Item{Label: songLabel(s), Song: &s})
 	}
 	return p
 }
@@ -182,7 +194,7 @@ func (a *App) albumsPage() *page {
 	for i := range a.lib.Albums {
 		al := a.lib.Albums[i]
 		p.items = append(p.items, Item{
-			Label: fmt.Sprintf("%-24s %2d trk", truncate(al.Name, 24), len(al.SongIDs)),
+			Label: fmt.Sprintf("%s  ·  %d tracks", al.Name, len(al.SongIDs)),
 			Album: &a.lib.Albums[i],
 		})
 	}
@@ -438,26 +450,9 @@ func (a *App) confirm() {
 		_ = a.store.SaveHistory(a.hist)
 		a.push(a.nowPlayingPage())
 	case it.Album != nil:
-		songs := a.lib.AlbumSongs(it.Album.Name, it.Album.Artist)
-		if a.ctl != nil && len(songs) > 0 {
-			if err := a.ctl.PlaySongs(songs, 0); err != nil {
-				a.status = err.Error()
-				return
-			}
-			a.push(a.nowPlayingPage())
-		}
+		a.push(a.albumTracksPage(*it.Album))
 	case it.Artist != nil:
-		var songs []library.Song
-		for _, name := range it.Artist.Albums {
-			songs = append(songs, a.lib.AlbumSongs(name, it.Artist.Name)...)
-		}
-		if a.ctl != nil && len(songs) > 0 {
-			if err := a.ctl.PlaySongs(songs, 0); err != nil {
-				a.status = err.Error()
-				return
-			}
-			a.push(a.nowPlayingPage())
-		}
+		a.push(a.artistAlbumsPage(*it.Artist))
 	}
 }
 
@@ -564,11 +559,11 @@ func (a *App) pageJump(dir int) {
 
 // ---- rendering -------------------------------------------------------------
 
-// Draw renders the current frame.
+// Draw renders a single-pane frame. Browsing pages use the full screen width;
+// the player uses a focused centered layout instead of a permanent detail pane.
 func (a *App) Draw() {
 	w, h := a.screen.Size()
 	a.screen.Clear()
-
 	styles := newStyles()
 	if a.off {
 		a.screen.Show()
@@ -579,21 +574,15 @@ func (a *App) Draw() {
 		a.screen.Show()
 		return
 	}
-
 	a.fill(0, 0, w, h, styles.bg)
 	a.drawStatus(w, styles)
-
 	p := a.top()
-	leftW := LeftWidth
-	if w < MinWidth {
-		leftW = w // compact mode: list only
-	}
-	a.drawList(p, leftW, h, styles)
-	if w >= MinWidth {
-		a.drawDetail(p, leftW+1, w, h, styles)
+	if p.kind == PageNowPlaying {
+		a.drawPlayer(w, h, styles)
+	} else {
+		a.drawList(p, w, h, styles)
 	}
 	a.drawHints(p, w, h, styles)
-
 	a.screen.Show()
 }
 
@@ -620,24 +609,52 @@ func (a *App) drawStatus(w int, st styles) {
 	if a.ctl != nil {
 		pb = a.ctl.Playback()
 	}
-	left := "♪ Sonata   " + a.top().title + "   mpv: " + string(pb.Status)
-	right := ""
-	if a.caps.HasBattery {
-		right = fmt.Sprintf("BAT %d%%", a.caps.BatteryPercent)
+	left := "♪ Sonata"
+	if pb.Status == state.StatusPlaying || pb.Status == state.StatusPaused {
+		glyph := "▶"
+		if pb.Status == state.StatusPaused {
+			glyph = "Ⅱ"
+		}
+		left += "   " + glyph + " " + truncate(pb.Title, 28)
 	}
-	clock := a.caps.Clock().Format("15:04")
-	right = strings.TrimSpace(right + "  " + clock)
+	right := a.caps.Clock().Format("15:04")
+	if a.caps.HasBattery {
+		right = fmt.Sprintf("%d%%   ", a.caps.BatteryPercent) + right
+	}
+	if a.locked {
+		right = "🔒   " + right
+	}
 	a.fill(0, 0, w, 1, st.status)
-	a.put(0, 0, truncate(left, w-displayWidth(right)-2), st.status)
-	a.put(w-displayWidth(right), 0, right, st.status)
+	a.put(2, 0, truncate(left, w-displayWidth(right)-4), st.status)
+	a.put(w-displayWidth(right)-2, 0, right, st.status)
 }
 
 func (a *App) drawList(p *page, width, h int, st styles) {
-	// Row 1 is the list header; rows 2..h-2 are items.
-	a.put(0, 1, truncate(p.title, width), st.header)
-	rows := h - 3
+	a.put(2, 2, truncate(p.title, width-4), st.header)
+	for x := 1; x < width-1; x++ {
+		a.screen.SetContent(x, 3, '─', nil, st.dim)
+	}
+	// Fill the panel: pick a row pitch (2 or 3 lines) that spreads the list
+	// over the available height instead of leaving a dead lower half.
+	available := h - 9
+	pitch := 2
+	if n := len(p.items); n > 0 {
+		if candidate := available / n; candidate > 2 {
+			pitch = 3
+			if candidate > 3 {
+				pitch = 3
+			}
+		}
+	}
+	rows := available / pitch
 	if rows < 1 {
 		rows = 1
+	}
+	startY := 5
+	if shown := len(p.items); shown > 0 && shown < rows {
+		if pad := (available - shown*pitch) / 2; pad > 0 {
+			startY += pad
+		}
 	}
 	if p.sel < p.top {
 		p.top = p.sel
@@ -650,133 +667,136 @@ func (a *App) drawList(p *page, width, h int, st styles) {
 		if idx >= len(p.items) {
 			break
 		}
-		label := "  " + p.items[idx].Label
+		it := p.items[idx]
+		label := a.itemLabel(p, it)
 		style := st.text
+		x := 4
 		if idx == p.sel {
-			label = "> " + p.items[idx].Label
 			style = st.selected
+			label = "›  " + label
+			x = 2
 		}
-		a.put(0, 2+i, truncate(label, width), style)
+		y := startY + i*pitch
+		a.fill(1, y, width-2, 1, style)
+		a.put(x, y, truncate(label, width-x-3), style)
 	}
-	// Vertical separator.
-	if width < a.screenWidth() {
-		for y := 1; y < h-1; y++ {
-			a.screen.SetContent(width, y, '│', nil, st.dim)
-		}
+	// Now-playing strip keeps playback visible without a detail pane.
+	if pb := a.playback(); pb.SongID != "" {
+		strip := "♪ " + pb.Title + " — " + pb.Artist
+		a.fill(1, h-4, width-2, 1, st.dim)
+		a.put(2, h-4, truncate(strip, width-4), st.dim)
 	}
-}
-
-func (a *App) screenWidth() int {
-	w, _ := a.screen.Size()
-	return w
-}
-
-func (a *App) drawDetail(p *page, x, w, h int, st styles) {
-	lines := a.detailLines(p)
-	for i, line := range lines {
-		if 1+i >= h-1 {
-			break
-		}
-		a.put(x+1, 1+i, truncate(line, w-x-2), st.text)
+	for x := 1; x < width-1; x++ {
+		a.screen.SetContent(x, h-2, '─', nil, st.dim)
 	}
 }
 
-func (a *App) detailLines(p *page) []string {
-	if p.kind == PageNowPlaying {
-		return a.nowPlayingLines()
-	}
-	if p.kind == PageMain {
-		c := a.lib.Counts()
-		lines := []string{
-			"Library",
-			"",
-			fmt.Sprintf("%d songs · %d artists · %d albums", c.Songs, c.Artists, c.Albums),
-		}
-		if !a.lib.GeneratedAt.IsZero() {
-			lines = append(lines, "Scanned "+a.lib.GeneratedAt.Local().Format("2006-01-02 15:04"))
-		}
-		if c.Skipped > 0 {
-			lines = append(lines, fmt.Sprintf("%d files skipped", c.Skipped))
-		}
-		lines = append(lines, "", a.lib.Root)
-		if recent := a.hist.RecentIDs(3); len(recent) > 0 {
-			lines = append(lines, "", "Last played")
-			for _, id := range recent {
-				if s, ok := a.lib.Song(id); ok {
-					lines = append(lines, "  ♫ "+s.Artist+" — "+s.Title)
-				}
-			}
-		}
-		return lines
-	}
-	if len(p.items) == 0 {
-		return []string{"Nothing here yet."}
-	}
-	it := p.items[p.sel]
-	switch {
-	case it.Song != nil:
-		s := it.Song
-		lines := []string{s.Title, "", s.Artist + " · " + s.Album}
-		if s.Track > 0 {
-			lines = append(lines, fmt.Sprintf("Track %02d", s.Track))
-		}
-		lines = append(lines, "", "Length: "+s.DisplayDuration(), "Format: "+s.Format, s.Path)
-		return lines
-	case it.Album != nil:
-		lines := []string{it.Album.Name, it.Album.Artist, "", "Tracks"}
-		for i, s := range a.lib.AlbumSongs(it.Album.Name, it.Album.Artist) {
-			lines = append(lines, fmt.Sprintf("%02d %-24s %s", i+1, truncate(s.Title, 24), s.DisplayDuration()))
-		}
-		return lines
-	case it.Artist != nil:
-		lines := []string{it.Artist.Name, fmt.Sprintf("%d albums · %d tracks", len(it.Artist.Albums), len(it.Artist.SongIDs)), "", "Albums"}
-		for _, name := range it.Artist.Albums {
-			lines = append(lines, "  "+name)
-		}
-		return lines
-	}
-	return []string{it.Label}
-}
-
-func (a *App) nowPlayingLines() []string {
+func (a *App) playback() state.Playback {
 	if a.ctl == nil {
-		return []string{"mpv unavailable", "", "Install mpv to enable playback."}
+		return state.Playback{}
 	}
-	pb := a.ctl.Playback()
-	if pb.SongID == "" {
-		return []string{"Nothing playing", "", "Pick a song from All Songs."}
+	return a.ctl.Playback()
+}
+
+func (a *App) itemLabel(p *page, item Item) string {
+	switch p.kind {
+	case PageMain:
+		c := a.lib.Counts()
+		labels := []string{
+			fmt.Sprintf("♪  All Songs (%d)", c.Songs),
+			fmt.Sprintf("☻  Artists (%d)", c.Artists),
+			fmt.Sprintf("▣  Albums (%d)", c.Albums),
+			fmt.Sprintf("♥  Favorites (%d)", len(a.fav.Songs)),
+			"⟳  Recently Played",
+			"▶  Now Playing",
+		}
+		return menuLabel(item.Label, labels)
+	case PageSongs:
+		return item.Label
+	case PageArtists:
+		if item.Artist != nil {
+			return "☻  " + item.Artist.Name + fmt.Sprintf("   ·   %d albums", len(item.Artist.Albums))
+		}
+	case PageAlbums:
+		if item.Album != nil {
+			return "▣  " + item.Album.Name + fmt.Sprintf("   ·   %d tracks", len(item.Album.SongIDs))
+		}
+	case PageFavorites:
+		return "♥  " + item.Label
+	case PageRecent:
+		return "⟳  " + item.Label
+	case PageQueue:
+		return item.Label
 	}
-	bar := progressBar(pb.Position, pb.Duration, 34)
-	lines := []string{
-		pb.Title,
-		"",
-		pb.Artist + " · " + pb.Album,
-		"",
-		bar,
-		fmt.Sprintf("%s / %s", mmss(pb.Position), mmss(pb.Duration)),
-		"",
-		"Mode: " + player.ParseMode(pb.Mode).Label(),
-		fmt.Sprintf("Volume: %d%%", pb.Volume),
+	return item.Label
+}
+
+func menuLabel(raw string, choices []string) string {
+	switch {
+	case strings.HasPrefix(raw, "All Songs"):
+		return choices[0]
+	case strings.HasPrefix(raw, "Artists"):
+		return choices[1]
+	case strings.HasPrefix(raw, "Albums"):
+		return choices[2]
+	case strings.HasPrefix(raw, "Favorites"):
+		return choices[3]
+	case strings.HasPrefix(raw, "Recently Played"):
+		return choices[4]
+	case strings.HasPrefix(raw, "Now Playing"):
+		return choices[5]
+	default:
+		return raw
 	}
+}
+
+func (a *App) drawPlayer(w, h int, st styles) {
+	pb := state.Playback{}
+	if a.ctl != nil {
+		pb = a.ctl.Playback()
+	}
+	center := func(y int, text string, style tcell.Style) {
+		x := (w - displayWidth(text)) / 2
+		if x < 1 {
+			x = 1
+		}
+		a.put(x, y, text, style)
+	}
+	center(4, "♫", st.playerIcon)
+	center(9, truncate(pb.Title, w-8), st.playerTitle)
+	center(11, truncate(strings.TrimSpace(pb.Artist+"   ·   "+pb.Album), w-8), st.text)
+	barWidth := w - 16
+	if barWidth > 46 {
+		barWidth = 46
+	}
+	if barWidth < 10 {
+		barWidth = 10
+	}
+	center(15, progressBar(pb.Position, pb.Duration, barWidth), st.progress)
+	center(16, fmt.Sprintf("%s / %s", mmss(pb.Position), mmss(pb.Duration)), st.dim)
+	stateLine := player.ParseMode(pb.Mode).Label() + fmt.Sprintf("   ·   Volume %d%%", pb.Volume)
 	if a.fav.Has(pb.SongID) {
-		lines = append(lines, "", "★ Favorite")
+		stateLine += "   ·   ♥"
 	}
-	return lines
+	center(19, stateLine, st.dim)
+	center(21, "◀◀         "+map[state.Status]string{state.StatusPlaying: "Ⅱ", state.StatusPaused: "▶", state.StatusStopped: "▶"}[pb.Status]+"         ▶▶", st.text)
 }
 
 func progressBar(pos, dur float64, width int) string {
 	if width < 4 {
 		width = 4
 	}
+	// Keep one cell for the knob so a position at or past the end cannot
+	// produce a negative repeat count.
 	filled := 0
 	if dur > 0 {
-		filled = int(float64(width) * (pos / dur))
-		if filled < 0 {
-			filled = 0
-		}
-		if filled > width {
-			filled = width
-		}
+		filled = int(float64(width-1) * (pos / dur))
+	}
+	if filled < 0 {
+		filled = 0
+	}
+	if filled > width-1 {
+		filled = width - 1
 	}
 	return "[" + strings.Repeat("█", filled) + "●" + strings.Repeat("░", width-filled-1) + "]"
 }
@@ -790,20 +810,16 @@ func mmss(sec float64) string {
 }
 
 func (a *App) drawHints(p *page, w, h int, st styles) {
-	hint := "[A] Play  [B] Back  [D-PAD] Move  [START] Play/Pause  [L1/R1] Prev/Next  [SELECT] ★"
-	switch p.kind {
-	case PageMain:
-		hint = "[A] Open  [B] Back  [D-PAD] Move  [START] Play/Pause  [L] Lock  [O] Screen off"
-	case PageNowPlaying:
-		hint = "[A] Play/Pause  [B] Back  [←/→] Seek 10s  [M] Mode  [+/-] Volume  [SELECT] ★"
-	case PageQueue:
-		hint = "[A] Play  [B] Back  [D-PAD] Move  [L1/R1] Prev/Next  [START] Pause"
+	hint := "A Select     B Back"
+	if p.kind == PageNowPlaying {
+		hint = "A Play/Pause     B Back     L/R Previous/Next"
+	} else if p.kind == PageSongs || p.kind == PageFavorites || p.kind == PageRecent {
+		hint = "A Play     B Back     Select Favorite"
 	}
 	if a.status != "" {
 		hint = a.status
 	}
-	a.fill(0, h-1, w, 1, st.hint)
-	a.put(0, h-1, truncate(hint, w), st.hint)
+	a.put(2, h-1, truncate(hint, w-4), st.hint)
 }
 
 func (a *App) drawLocked(w, h int, st styles) {

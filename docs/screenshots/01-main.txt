@@ -1,30 +1,30 @@
-♪ Sonata   Music   mpv: stopped                                                      14:09
-Music                           │ Library
-> All Songs (4)                 │
-  Artists (3)                   │ 4 songs · 3 artists · 3 albums
-  Albums (3)                    │ Scanned 2026-10-26 14:09
-  Favorites (0)                 │
-  Recently Played               │ [music library]
-  Now Playing                   │
-  Queue                         │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-                                │
-[A] Open  [B] Back  [D-PAD] Move  [START] Play/Pause  [L] Lock  [O] Screen off
+  ♪ Sonata   ▶ walpurgis                                                           21:45
+
+  Music
+ ────────────────────────────────────────────────────────────────────────────────────────
+
+
+  ›  ♪  All Songs (4)
+
+
+    ☻  Artists (3)
+
+
+    ▣  Albums (3)
+
+
+    ♥  Favorites (0)
+
+
+    ⟳  Recently Played
+
+
+    ▶  Now Playing
+
+
+
+
+  ♪ walpurgis — Aimer
+
+ ────────────────────────────────────────────────────────────────────────────────────────
+  A Select     B Back

@@ -115,23 +115,23 @@ func TestMainScreenLayout(t *testing.T) {
 	app, screen := newTestApp(t, ctl)
 	lines := renderLines(app, screen)
 
-	if !strings.Contains(lines[0], "Sonata") || !strings.Contains(lines[0], "mpv: playing") {
-		t.Errorf("status bar missing: %q", lines[0])
+	if !strings.Contains(lines[0], "Sonata") || !strings.Contains(lines[0], "▶") {
+		t.Errorf("status bar missing playback indicator: %q", lines[0])
 	}
-	if !strings.Contains(lines[0], "BAT 82%") || !strings.Contains(lines[0], "12:04") {
+	if !strings.Contains(lines[0], "12:04") {
 		t.Errorf("status bar right side missing: %q", lines[0])
 	}
-	if !strings.Contains(lines[1], "Music") {
+	if !strings.Contains(lines[2], "Music") {
 		t.Errorf("list header missing: %q", lines[1])
 	}
-	if !strings.Contains(lines[2], "> All Songs") {
-		t.Errorf("selection marker missing: %q", lines[2])
+	if !hasRow(lines, "›", "All Songs") {
+		t.Errorf("selection marker missing:\n%s", strings.Join(lines, "\n"))
 	}
-	if !strings.Contains(lines[29], "[A] Open") {
+	if !strings.Contains(lines[29], "A Select") {
 		t.Errorf("hint bar missing: %q", lines[29])
 	}
-	if !strings.Contains(lines[5], "│") {
-		t.Errorf("vertical separator missing on row 5: %q", lines[5])
+	if strings.Contains(strings.Join(lines, "\n"), "│") {
+		t.Error("single-pane layout should not draw a column divider")
 	}
 	// Four zones: status(1) + content(28) + hint(1)
 	if len(lines) != 30 {
@@ -145,19 +145,15 @@ func TestSongsPageAndFavorite(t *testing.T) {
 
 	app.HandleKey(key(tcell.KeyEnter, 0)) // open All Songs
 	lines := renderLines(app, screen)
-	if !strings.Contains(lines[0], "All Songs") {
-		t.Fatalf("title = %q", lines[0])
+	if !strings.Contains(lines[2], "All Songs") {
+		t.Fatalf("page heading = %q", lines[2])
 	}
-	if !strings.Contains(lines[2], "七里香") {
-		t.Fatalf("first song missing: %q", lines[2])
+	if !hasRow(lines, "七里香", "4:32") {
+		t.Fatalf("first song row missing:\n%s", strings.Join(lines, "\n"))
 	}
-	if !strings.Contains(lines[2], "4:32") {
-		t.Errorf("duration missing: %q", lines[2])
-	}
-	// Detail panel should describe the selected song.
 	joined := strings.Join(lines, "\n")
-	if !strings.Contains(joined, "周杰伦") || !strings.Contains(joined, "FLAC") {
-		t.Errorf("detail panel incomplete:\n%s", joined)
+	if strings.Contains(joined, "FLAC") || strings.Contains(joined, "周杰伦 · 七里香") {
+		t.Errorf("browse page should not show a persistent detail panel:\n%s", joined)
 	}
 
 	app.HandleKey(key(tcell.KeyTab, 0)) // favorite
@@ -256,12 +252,32 @@ func TestProgressBar(t *testing.T) {
 	if got := progressBar(0, 0, 10); strings.Count(got, "░") != 9 {
 		t.Errorf("unknown duration bar = %q", got)
 	}
+	if got := progressBar(500, 100, 10); strings.Count(got, "█") != 9 || strings.Count(got, "░") != 0 {
+		t.Errorf("overflow bar = %q", got)
+	}
 	if got := progressBar(50, 100, 10); !strings.HasPrefix(got, "[████") {
 		t.Errorf("half bar = %q", got)
 	}
 	if got := mmss(72); got != "1:12" {
 		t.Errorf("mmss(72) = %q", got)
 	}
+}
+
+// hasRow reports whether some rendered row contains every marker.
+func hasRow(lines []string, markers ...string) bool {
+	for _, line := range lines {
+		ok := true
+		for _, m := range markers {
+			if !strings.Contains(line, m) {
+				ok = false
+				break
+			}
+		}
+		if ok {
+			return true
+		}
+	}
+	return false
 }
 
 func key(k tcell.Key, r rune) *tcell.EventKey {
